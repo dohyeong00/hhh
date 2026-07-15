@@ -56,3 +56,20 @@ def update_post(db: Session, post: Post, title: str, content: str):
 def delete_post(db: Session, post: Post):
     db.delete(post)
     db.commit()
+
+# crud.py 에 아래 내용 추가
+import numpy as np
+from sqlalchemy import select
+from .models import Knowledge
+
+def create_knowledge(db: Session, content: str, embedding_vector: list):
+    emb_bytes = np.array(embedding_vector, dtype=np.float32).tobytes()
+    k = Knowledge(content=content, embedding=emb_bytes)
+    db.add(k)
+    db.commit()
+    db.refresh(k)
+    return k
+
+def get_all_knowledge(db: Session):
+    stmt = select(Knowledge)
+    return db.scalars(stmt).all()

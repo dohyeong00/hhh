@@ -1,3 +1,16 @@
+# main.py 상단 import 추가
+import os
+import numpy as np
+from pathlib import Path
+from dotenv import load_dotenv
+from openai import OpenAI
+from .models.database import RagBase, rag_engine, get_rag_db
+from .models.schemas import KnowledgeCreate, RAGQuery
+from .models.crud import create_knowledge, get_all_knowledge
+
+# [추가] sentence-transformers 라이브러리 임포트
+from sentence_transformers import SentenceTransformer
+
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
@@ -35,6 +48,9 @@ origins = [
 
 TourBase.metadata.create_all(bind=tour_engine)
 PostBase.metadata.create_all(bind=post_engine)
+
+# RAG 테이블 생성 등록
+RagBase.metadata.create_all(bind=rag_engine)
 
 app = FastAPI(
     title="Gumi Tour API",
@@ -107,6 +123,22 @@ def normalize_categories(values: list[str] | None) -> list[str]:
                 result.append(normalized)
     return result
 
+# OpenAI 클라이언트 초기화
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)  
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+embed_model = SentenceTransformer('jhgan/ko-sroberta-multitask')
+
+# 🟢 [수정] OpenAI API를 거치지 않고 로컬에서 임베딩 벡터 생성
+def get_embedding(text: str) -> list:
+    # 모델을 통해 1차원 numpy array 형태의 임베딩을 얻은 뒤 list로 변환하여 반환합니다.
+    embedding_vector = embed_model.encode(text)
+    return embedding_vector.tolist()
+
+def cosine_similarity(v1, v2):
+    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
 
 @app.get("/")
 def read_root():
@@ -357,3 +389,135 @@ def api_delete_post(
         raise HTTPException(401, "Invalid password")
     delete_post(db, p)
     return {"detail": "deleted"}
+
+# --- RAG API 라우터 추가 ---
+
+@app.post("/rag/documents", tags=["RAG"])
+def add_rag_document(payload: KnowledgeCreate, db: Session = Depends(get_rag_db)):
+    """지식베이스 데이터 등록"""
+    emb = get_embedding(payload.content)
+    create_knowledge(db, content=payload.content, embedding_vector=emb)
+    return {"status": "success", "message": "지식이 추가되었습니다."}
+
+
+@app.post("/rag/ask", tags=["RAG"])
+def ask_rag_system(payload: RAGQuery, db: Session = Depends(get_rag_db)):
+    """RAG 기반 질문 답변"""
+    query_emb = np.array(get_embedding(payload.question), dtype=np.float32)
+    
+    # CRUD에서 원본 데이터 조회
+    rows = get_all_knowledge(db)
+    if not rows:
+        return {"answer": "등록된 지식이 없습니다."}
+    
+    # 유사도 계산
+    scored_documents = []
+    for row in rows:
+        doc_emb = np.frombuffer(row.embedding, dtype=np.float32)
+        similarity = cosine_similarity(query_emb, doc_emb)
+        scored_documents.append((similarity, row.content))
+        
+    scored_documents.sort(key=lambda x: x[0], reverse=True)
+    top_context = "\n---\n".join([doc[1] for doc in scored_documents[:2]])
+    
+    # LLM 호출
+    system_prompt = f"제공된 참고 정보만을 근거로 답변하세요:\n\n[참고 정보]\n{top_context}"
+    response = openai_client.chat.completions.create(
+        model="gpt-5-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": payload.question}
+        ],
+    )
+    
+    return {
+        "question": payload.question,
+        "answer": response.choices[0].message.content
+    }
+
+# --- 하이브리드 RAG 엔드포인트 추가 ---
+
+class TourRAGQuery(BaseModel):
+    question: str
+    region: str | None = None  # 특정 지역(예: "Gumi", "Andong")으로 필터를 걸고 싶을 때 사용
+
+
+@app.post("/rag/ask-tour", tags=["RAG"], summary="기존 관광지 DB 기반 AI 추천 및 답변")
+def ask_tour_rag(payload: TourRAGQuery, db: Session = Depends(get_tour_db)):
+    """
+    사용자의 질문 키워드를 분석해 기존 Tour DB에서 관련 정보를 조회하고,
+    그 결과를 바탕으로 GPT가 자연스러운 추천 답변을 생성합니다.
+    """
+    try:
+        # 1. 사용자의 질문에서 핵심 검색 키워드 추출 (간이 형태)
+        # 예: "구미 금오산 맛집 알려줘" -> "금오산"을 키워드로 활용
+        # (더 정교하게 하려면 키워드를 공백 단위로 쪼개거나 형태소 분석을 할 수 있습니다)
+        search_keyword = payload.question.strip()
+        for stop_word in ["알려줘", "추천해줘", "어디야", "어디가", "있어?", "추천"]:
+            search_keyword = search_keyword.replace(stop_word, "").strip()
+
+        # 2. 기존 Tour DB에서 관련 관광지 조회 (기존 search_places 로직 재사용)
+        stmt = select(TourItem)
+        
+        filters = []
+        if search_keyword:
+            filters.append(TourItem.title.ilike(f"%{search_keyword}%") | TourItem.addr1.ilike(f"%{search_keyword}%"))
+        if payload.region:
+            filters.append(TourItem.region == payload.region)
+            
+        if filters:
+            stmt = stmt.where(*filters)
+            
+        # 검색 결과 상위 5개 가져오기
+        stmt = stmt.order_by(TourItem.title).limit(5)
+        items = db.scalars(stmt).all()
+
+        # 3. 만약 검색된 정보가 없다면 최소한의 지역 기반 검색으로 백업
+        if not items and payload.region:
+            stmt = select(TourItem).where(TourItem.region == payload.region).order_by(func.random()).limit(3)
+            items = db.scalars(stmt).all()
+
+        # 4. 조회된 DB 데이터를 GPT가 읽을 수 있는 참고용 문맥(Context) 텍스트로 가공
+        context_parts = []
+        for idx, item in enumerate(items, 1):
+            context_parts.append(
+                f"[{idx}] 이름: {item.title}\n"
+                f"   - 카테고리: {item.content_type or '미지정'}\n"
+                f"   - 주소: {item.addr1 or ''} {item.addr2 or ''}\n"
+                f"   - 전화번호: {item.tel or '없음'}"
+            )
+        
+        retrieved_context = "\n\n".join(context_parts)
+
+        # 5. GPT에게 보낼 시스템 프롬프트 작성
+        if items:
+            system_prompt = f"""너는 구미 및 경북 지역 관광 전문 안내 비서야.
+반드시 제공된 [관광 데이터 목록]에 존재하는 실제 관광지만을 추천하고 설명해야 해.
+목록에 없는 관광지를 억지로 지어내서 추천하지 마. 답변할 때 구체적인 주소와 전화번호가 있다면 함께 친절하게 안내해줘.
+
+[관광 데이터 목록]
+{retrieved_context}"""
+        else:
+            system_prompt = """너는 구미 및 경북 지역 관광 전문 안내 비서야.
+현재 사용자가 찾는 조건에 맞는 관광 데이터가 DB에 없어. 
+정중하게 사과하고, 어떤 지역의 정보를 찾으시는지 구체적으로 다시 물어봐줘."""
+
+        # 6. LLM 호출 및 답변 생성
+        response = openai_client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": payload.question}
+            ],
+        )
+
+        # 7. 참고한 데이터와 함께 답변 반환
+        return {
+            "question": payload.question,
+            "matched_items_count": len(items),
+            "retrieved_context": retrieved_context if items else "No matched data in DB",
+            "answer": response.choices[0].message.content
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"RAG 요청 처리 중 오류 발생: {str(e)}")

@@ -34,7 +34,7 @@ class TourItem(TourBase):
     createdtime = Column(String)
     modifiedtime = Column(String)
 
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import DateTime, Text
 from datetime import datetime
 
 class Post(PostBase):
@@ -46,3 +46,14 @@ class Post(PostBase):
     author = Column(String, default="익명")
     password = Column(String, nullable=False)  # 평문 저장 (교육용)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+# models/models.py 에 아래 내용 추가
+from sqlalchemy import LargeBinary
+from .database import RagBase
+
+class Knowledge(RagBase):
+    __tablename__ = "knowledge_base"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String, nullable=False)
+    embedding = Column(LargeBinary, nullable=False) # 벡터 데이터를 바이너리로 저장

@@ -46,3 +46,11 @@ class PaginatedPosts(BaseModel):
     total: int
     limit: int
     offset: int
+
+# models/schemas.py 에 아래 내용 추가
+
+class KnowledgeCreate(BaseModel):
+    content: str
+
+class RAGQuery(BaseModel):
+    question: str
