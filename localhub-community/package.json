@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "dependencies": {
+    "vue": "^3.5.39"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-vue": "^6.0.8"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  }
+}

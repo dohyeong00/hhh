@@ -1,0 +1,15 @@
+# venv
+hhh_venv
+
+# data
+data
+
+# fastapi
+__pycache__
+
+# vue
+node_modules
+
+.env
+
+.vite

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalHub - 경북 익명 커뮤니티 & 로컬 챗봇</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" 
+          integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" 
+          crossorigin="anonymous"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap');
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+    /* 스크롤바 정밀 세팅 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-center p-3 md:p-6 relative overflow-x-hidden">
+
+  <div class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[850px] relative transition-all duration-300">
+    
+    <header class="p-6 bg-gradient-to-r from-indigo-700 via-indigo-800 to-slate-900 text-white flex items-center justify-between shrink-0 shadow-md">
+      <div class="flex items-center space-x-4">
+        <div class="bg-indigo-500/20 p-3 rounded-2xl border border-indigo-400/20">
+          <i data-lucide="map" class="w-6 h-6 text-indigo-300"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-extrabold text-lg tracking-tight">𐦂𖨆𐀪𖠋 구미 경북권 커뮤니티 🗫</h1>
+            <span class="bg-indigo-600 text-[10px] px-2.5 py-0.5 rounded-full font-bold text-indigo-100">익명 소통</span>
+          </div>
+          <p class="text-xs text-slate-300 font-normal mt-0.5">경북의 음식점·숙박·관광지·쇼핑·레포츠 정보를 넓고 쾌적한 화면에서 공유해 보세요</p>
+        </div>
+      </div>
+      
+      <button onclick="switchView('write')" id="btn-header-write" class="bg-white text-indigo-800 hover:bg-indigo-50 px-4 py-2.5 rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95">
+        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+        <span>새 글 작성</span>
+      </button>
+    </header>
+
+    <div id="top-alert" class="hidden bg-emerald-50 border-b border-emerald-100 text-emerald-800 px-6 py-3 text-xs flex justify-between items-center shrink-0">
+      <span id="top-alert-msg" class="font-semibold flex items-center">
+        <i data-lucide="check-circle-2" class="w-4 h-4 mr-2 text-emerald-600"></i>
+      </span>
+      <button onclick="closeTopAlert()"><i data-lucide="x" class="w-4 h-4 text-emerald-400 hover:text-emerald-600"></i></button>
+    </div>
+
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 shrink-0">
+      <div class="flex items-center space-x-2 overflow-x-auto pb-1" id="category-tabs">
+        <button onclick="filterCategory('전체')" id="tab-all" 
+          data-base="bg-slate-200 text-slate-700 border-slate-300"
+          data-active="bg-slate-700 text-white border-slate-800 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-bold transition-all shrink-0 bg-slate-700 text-white border border-slate-800 shadow-md">
+          전체 보기
+        </button>
+        
+        <button onclick="filterCategory('음식점')" id="tab-음식점" 
+          data-base="bg-orange-50 text-orange-700 border-orange-100"
+          data-active="bg-orange-600 text-white border-orange-700 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 bg-orange-50 text-orange-700 border border-orange-100 hover:shadow-sm">
+          🍔 음식점
+        </button>
+        
+        <button onclick="filterCategory('숙박')" id="tab-숙박" 
+          data-base="bg-sky-50 text-sky-700 border-sky-100"
+          data-active="bg-sky-600 text-white border-sky-700 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 bg-sky-50 text-sky-700 border border-sky-100 hover:shadow-sm">
+          🏨 숙박
+        </button>
+        
+        <button onclick="filterCategory('관광지')" id="tab-관광지" 
+          data-base="bg-emerald-50 text-emerald-700 border-emerald-100"
+          data-active="bg-emerald-600 text-white border-emerald-700 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-100 hover:shadow-sm">
+          ⛰️ 관광지
+        </button>
+        
+        <button onclick="filterCategory('쇼핑')" id="tab-쇼핑" 
+          data-base="bg-purple-50 text-purple-700 border-purple-100"
+          data-active="bg-purple-600 text-white border-purple-700 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 bg-purple-50 text-purple-700 border border-purple-100 hover:shadow-sm">
+          🛍️ 쇼핑
+        </button>
+        
+        <button onclick="filterCategory('레포츠')" id="tab-레포츠" 
+          data-base="bg-amber-50 text-amber-700 border-amber-100"
+          data-active="bg-amber-600 text-white border-amber-700 shadow-md font-extrabold"
+          class="px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 bg-amber-50 text-amber-700 border border-amber-100 hover:shadow-sm">
+          🏄 레포츠
+        </button>
+      </div>
+    </div>
+
+    <main class="flex-1 overflow-y-auto p-6 bg-slate-50/20" id="view-container">
+      
+      <div id="view-list" class="space-y-4">
+        <div class="flex items-center justify-between pb-2">
+          <div class="relative flex-1 max-w-sm">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+            </span>
+            <input type="text" id="search-input" oninput="handleSearch()" placeholder="검색하고 싶은 키워드를 입력해 보세요..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-250 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+          </div>
+          <span class="text-xs text-slate-400 font-bold bg-slate-100 px-3 py-1.5 rounded-full" id="posts-count">총 0개 이야기</span>
+        </div>
+
+        <div id="posts-list" class="space-y-4">
+          </div>
+      </div>
+
+      <div id="view-write" class="hidden space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+          <h2 class="font-extrabold text-slate-850 text-base flex items-center">
+            <i data-lucide="edit-3" class="w-5 h-5 mr-2 text-indigo-600"></i>경북 익명 글 작성
+          </h2>
+          <button onclick="switchView('list')" class="text-xs text-slate-400 hover:text-slate-600 flex items-center font-semibold">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> 취소하고 목록으로
+          </button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">카테고리 구분 (필수)</label>
+            <select id="post-category" class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+              <option value="음식점">🍔 음식점 (맛집, 카페)</option>
+              <option value="숙박">🏨 숙박 (호텔, 글램핑, 민박)</option>
+              <option value="관광지">⛰️ 관광지 (자연, 역사, 유적지)</option>
+              <option value="쇼핑">🛍️ 쇼핑 (전통시장, 마트, 소품샵)</option>
+              <option value="레포츠">🏄 레포츠 (액티비티, 등산, 라이딩)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">작성자 닉네임</label>
+              <input type="text" id="post-author" placeholder="익명" class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">글 비밀번호 (4자리 필수)</label>
+              <input type="password" id="post-password" maxlength="4" placeholder="수정/삭제 시 필요한 비밀번호" class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">글 제목</label>
+            <input type="text" id="post-title" placeholder="경북 방문객 및 주민들이 한눈에 알아볼 수 있는 흥미로운 제목을 적어주세요." class="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+          </div>
+          
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">내용 작성</label>
+            <textarea id="post-content" rows="8" placeholder="상세한 후기, 찾아가는 길, 비용 정보 등 유용한 이야기를 자유롭게 작성해 보세요!" class="w-full bg-white border border-slate-200 rounded-xl p-4 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none"></textarea>
+          </div>
+          
+          <button onclick="saveNewPost()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:scale-[1.01]">
+            이야기 등록 완료
+          </button>
+        </div>
+      </div>
+
+      <div id="view-detail" class="hidden space-y-5">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <button onclick="switchView('list')" class="flex items-center text-xs font-bold text-slate-500 hover:text-indigo-600 transition">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> 목록으로 가기
+          </button>
+          
+          <div class="flex space-x-1.5">
+            <button onclick="initiateAuth('edit')" class="text-xs text-amber-600 hover:bg-amber-50 px-3 py-2 rounded-xl font-bold transition flex items-center border border-amber-100">
+              <i data-lucide="pencil" class="w-3.5 h-3.5 mr-1"></i>수정
+            </button>
+            <button onclick="initiateAuth('delete')" class="text-xs text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl font-bold transition flex items-center border border-red-100">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i>삭제
+            </button>
+          </div>
+        </div>
+
+        <article class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span id="detail-category-badge" class="text-xs px-3 py-1 rounded-full font-extrabold border"></span>
+            
+            <div class="flex items-center space-x-2 shrink-0">
+              <a id="kakaotalk-sharing-btn" href="javascript:;" class="bg-[#FEE500] text-[#191919] hover:bg-[#FADA0A] font-bold px-2.5 py-1.5 rounded-xl flex items-center space-x-1.5 text-[10px] shadow-sm transition-all">
+                <img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_medium.png" alt="카카오톡" class="w-3.5 h-3.5" />
+                <span>카톡 공유</span>
+              </a>
+              <button onclick="copyLocationLink()" class="bg-slate-700 text-white hover:bg-slate-800 font-bold px-2.5 py-1.5 rounded-xl flex items-center space-x-1.5 text-[10px] shadow-sm transition-all">
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                <span>링크 복사</span>
+              </button>
+            </div>
+          </div>
+
+          <h3 id="detail-title" class="font-extrabold text-slate-900 text-xl leading-snug"></h3>
+          
+          <div class="flex items-center space-x-3 text-xs text-slate-400 border-b border-slate-100 pb-3">
+            <span id="detail-author" class="font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg"></span>
+            <span>•</span>
+            <span id="detail-date" class="flex items-center"><i data-lucide="calendar" class="w-3.5 h-3.5 mr-1"></i></span>
+          </div>
+          
+          <div id="detail-content" class="bg-slate-50/50 p-6 border border-slate-200/80 rounded-2xl text-xs leading-relaxed text-slate-600 whitespace-pre-line min-h-[220px] shadow-inner">
+          </div>
+        </article>
+
+        <div id="auth-drawer" class="hidden border border-amber-200 bg-amber-50/50 rounded-2xl p-5 space-y-3.5">
+          <div class="flex justify-between items-center">
+            <span id="auth-title-label" class="text-xs font-bold text-slate-700 flex items-center">
+              <i data-lucide="lock" class="w-4 h-4 mr-1.5 text-amber-600"></i> 비밀번호 인증 절차
+            </span>
+            <button onclick="closeAuthDrawer()" class="text-xs text-slate-400 hover:text-slate-600 font-bold">닫기</button>
+          </div>
+          <div class="flex space-x-3">
+            <input type="password" id="auth-password-input" placeholder="인증 비밀번호 4자리" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            <button onclick="verifyPassword()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold hover:bg-indigo-700 transition">인증 검사</button>
+          </div>
+          <p id="auth-error-msg" class="hidden text-xs text-red-500 font-bold flex items-center">
+            <i data-lucide="alert-circle" class="w-4 h-4 mr-1.5"></i> 입력하신 비밀번호가 올바르지 않습니다.
+          </p>
+        </div>
+
+        <div id="edit-form-container" class="hidden border-t border-slate-200 pt-5 space-y-4">
+          <div class="flex items-center space-x-1.5">
+            <i data-lucide="pencil-line" class="w-5 h-5 text-indigo-600"></i>
+            <h4 class="text-xs font-bold text-slate-700">포스팅 원문 수정</h4>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">제목 수정</label>
+              <input type="text" id="edit-title" class="w-full border border-slate-200 rounded-xl px-3.5 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">내용 수정</label>
+              <textarea id="edit-content" rows="8" class="w-full border border-slate-200 rounded-xl p-4 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+            </div>
+            <button onclick="submitUpdatePost()" class="w-full bg-indigo-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-indigo-700 transition">수정 사항 게시하기</button>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+    
+    <footer class="p-4 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-400 shrink-0">
+      경북 LocalHub 커뮤니티 전용 모듈 • SQLite-like LocalStorage Engine 활성화 중
+    </footer>
+
+    <div class="absolute bottom-6 right-6 z-50">
+      <button onclick="toggleChatbot()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+        <i data-lucide="bot" id="chatbot-icon" class="w-6 h-6"></i>
+      </button>
+    </div>
+
+    <div id="chatbot-window" class="hidden absolute bottom-24 right-6 w-80 h-[450px] bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-50 flex flex-col overflow-hidden transition-all duration-200">
+      <header class="p-4 bg-indigo-800 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="bg-white/10 p-1.5 rounded-lg">
+            <i data-lucide="bot" class="w-4 h-4 text-indigo-200"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold">경북 도우미 로컬봇</h4>
+            <span class="text-[9px] text-indigo-300 font-medium">실시간 대화 응대 중</span>
+          </div>
+        </div>
+        <button onclick="toggleChatbot()" class="text-indigo-200 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </header>
+
+      <div id="chat-messages" class="flex-1 overflow-y-auto p-3.5 space-y-3 bg-slate-50/50 text-xs">
+        <div class="flex items-start space-x-2">
+          <div class="bg-indigo-100 p-1 rounded-full shrink-0">
+            <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-600"></i>
+          </div>
+          <div class="bg-white p-2.5 rounded-r-xl rounded-bl-xl border border-slate-100 shadow-sm max-w-[80%]">
+            반갑습니다! 경북 LocalHub 로컬 도우미 챗봇입니다. 😊 <br><br>경북지역 맛집, 유명 숙소, 가볼만한 관광지, 특색 쇼핑 시장, 재밌는 레포츠 활동에 대해 질문해주세요!
+          </div>
+        </div>
+      </div>
+
+      <div class="p-2 bg-slate-100 border-t border-slate-200 flex items-center space-x-1.5 overflow-x-auto shrink-0">
+        <button onclick="sendQuickKeyword('추천 맛집')" class="bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 border border-slate-200 px-2 py-1 rounded-lg text-[10px] shrink-0 transition-all">🍔 맛집</button>
+        <button onclick="sendQuickKeyword('주요 관광지')" class="bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 border border-slate-200 px-2 py-1 rounded-lg text-[10px] shrink-0 transition-all">⛰️ 관광지</button>
+        <button onclick="sendQuickKeyword('레포츠 활동')" class="bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 border border-slate-200 px-2 py-1 rounded-lg text-[10px] shrink-0 transition-all">🏄 레포츠</button>
+        <button onclick="sendQuickKeyword('전통시장')" class="bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 border border-slate-200 px-2 py-1 rounded-lg text-[10px] shrink-0 transition-all">🛍️ 쇼핑</button>
+      </div>
+
+      <div class="p-2.5 bg-white border-t border-slate-200 flex space-x-1.5 shrink-0">
+        <input type="text" id="chat-input" onkeypress="handleChatEnter(event)" placeholder="질문을 전송해보세요..." class="flex-1 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600">
+        <button onclick="sendChatMessage()" class="bg-indigo-600 text-white p-1.5 rounded-xl hover:bg-indigo-700 transition">
+          <i data-lucide="send" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ----------------------------------------------------
+    // 1. 상태 및 경북 맞춤 테마 기본 DB 정의
+    // ----------------------------------------------------
+    let posts = [];
+    let currentDetailPost = null;
+    let currentViewMode = 'list'; 
+    let currentAuthAction = null; 
+    let activeFilterCategory = '전체';
+    let currentSortMode = 'latest'; 
+
+    const defaultData = [
+      { id: 1, category: "관광지", title: "안동 하회마을 부용대 가시는 분들 필수 정보!", content: "하회마을을 한눈에 내려다볼 수 있는 부용대는 나룻배를 타고 건너가는 방법과 차량으로 멀리 돌아가는 법이 있습니다. 나룻배 편도가 인당 몇천 원 하지 않으니 나룻배 체험 강추드려요! 가을에는 경치가 정말 아름답습니다.", author: "안동사랑", password: "1111", date: "2026-07-14 10:10", views: 12 },
+      { id: 2, category: "음식점", title: "구미 금오산 근처 파전이랑 수제비 대박집 후기", content: "금오산 도립공원 입구 야외 식당가에 있는 파전집 정말 대단하네요. 비오는 날 갔는데 바삭하고 두꺼운 해물파전이랑 뜨끈한 들깨수제비 조합이 완전 사기적입니다. 주말에는 웨이팅 있으니 조금 일찍 가세요.", author: "수제비러버", password: "2222", date: "2026-07-14 13:45", views: 45 },
+      { id: 3, category: "숙박", title: "경주 보문단지 근처 가성비 오션뷰 한옥펜션", content: "경주 보문호수가 멀리 살짝 보이는 한옥 스타일 펜션에서 묵고 왔는데 정원이 너무 아기자기하게 예쁩니다. 밤에 한옥 처마 아래서 별 구경하는 감성이 끝내줍니다. 사장님도 정말 친절하셔요.", author: "한옥스테이", password: "3333", date: "2026-07-14 15:20", views: 28 },
+      { id: 4, category: "쇼핑", title: "포항 죽도시장 대게 저렴하게 구매하는 노하우", content: "죽도시장 수산 구역 안쪽으로 깊숙이 들어갈수록 호객행위도 덜하고 가격이 다운됩니다. 당일 시세를 모바일 어플로 대충 파악하고 가시는 것이 좋으며, 대게를 사면서 쪄달라고 한 뒤 2층 초장집에서 바로 게딱지 볶음밥까지 드시면 극락입니다.", author: "죽도대게짱", password: "4444", date: "2026-07-14 16:05", views: 33 },
+      { id: 5, category: "레포츠", title: "경북 청도 오션파크 루지 액티비티 주말 탑승 소감", content: "경북 남부권에서 레포츠를 찾으신다면 청도 군파크 루지 무조건 가보세요. 아시아 최대 급 길이로 알고 있는데, 리프트 타고 올라가는 산 전경부터 속도감 넘치는 곡선 주행까지 스트레스가 싹 풀립니다. 아이들도 동반 탑승해서 안전해요.", author: "스피드왕", password: "5555", date: "2026-07-14 16:30", views: 19 }
+    ];
+
+    function loadPosts() {
+      const stored = localStorage.getItem('localhub_gb_posts');
+      if (stored) {
+        posts = JSON.parse(stored);
+        posts.forEach(p => {
+          if (p.views === undefined) p.views = 0;
+        });
+      } else {
+        posts = [...defaultData];
+        savePostsToStorage();
+      }
+    }
+
+    function savePostsToStorage() {
+      localStorage.setItem('localhub_gb_posts', JSON.stringify(posts));
+    }
+
+    // 🌟 [추가] 카카오 SDK 초기화 함수 구현
+    function initKakao() {
+      if (window.Kakao) {
+        if (!window.Kakao.isInitialized()) {
+          // ⚠️ 본인의 카카오 디벨로퍼스 앱 [JavaScript 키]를 여기에 넣어주세요.
+          window.Kakao.init('YOUR_JAVASCRIPT_KEY');
+          console.log('카카오 SDK 초기화 성공:', window.Kakao.isInitialized());
+        }
+      } else {
+        console.error('카카오 SDK 스크립트가 로드되지 않았습니다.');
+      }
+    }
+
+    // 🌟 [추가] 일반 브라우저용 URL 복사 기능 함수 구현
+    function copyLocationLink() {
+      if (!currentDetailPost) return;
+      const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${currentDetailPost.id}`;
+      
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        triggerStatusNotification("현재 게시글 링크가 클립보드에 복사되었습니다!");
+      }).catch(err => {
+        console.error("링크 복사 실패:", err);
+        triggerStatusNotification("링크 복사 중 요류가 발생했습니다.", true);
+      });
+    }
+
+    // ----------------------------------------------------
+    // 2. 뷰 전환 및 검색 처리
+    // ----------------------------------------------------
+    function switchView(view) {
+      currentViewMode = view;
+      
+      const vList = document.getElementById('view-list');
+      const vWrite = document.getElementById('view-write');
+      const vDetail = document.getElementById('view-detail');
+      const btnHeaderWrite = document.getElementById('btn-header-write');
+
+      vList.classList.add('hidden');
+      vWrite.classList.add('hidden');
+      vDetail.classList.add('hidden');
+      btnHeaderWrite.classList.add('hidden');
+
+      if (view === 'list') {
+        vList.classList.remove('hidden');
+        btnHeaderWrite.classList.remove('hidden');
+        renderPosts();
+      } else if (view === 'write') {
+        vWrite.classList.remove('hidden');
+        clearWriteFields();
+      } else if (view === 'detail') {
+        vDetail.classList.remove('hidden');
+      }
+    }
+
+    // ----------------------------------------------------
+    // 3. 카테고리 필터 및 정렬
+    // ----------------------------------------------------
+    function filterCategory(cat) {
+      activeFilterCategory = cat;
+      currentSortMode = 'latest'; 
+      
+      const buttons = document.querySelectorAll('#category-tabs button');
+      
+      buttons.forEach(btn => {
+        const baseClass = btn.getAttribute('data-base');
+        if (baseClass) {
+          btn.className = `px-5 py-3 rounded-full text-xs font-semibold transition-all shrink-0 border ${baseClass} hover:shadow-sm`;
+        }
+      });
+
+      let selectedId = 'tab-all';
+      if (cat !== '전체') {
+        selectedId = `tab-${cat}`;
+      }
+      
+      const activeBtn = document.getElementById(selectedId);
+      if (activeBtn) {
+        const activeClass = activeBtn.getAttribute('data-active');
+        if (activeClass) {
+          activeBtn.className = `px-5 py-3 rounded-full text-xs transition-all shrink-0 border ${activeClass}`;
+        }
+      }
+
+      switchView('list');
+    }
+
+    function changeSortMode(mode) {
+      currentSortMode = mode;
+      renderPosts();
+    }
+
+    function renderPosts(filteredArray = null) {
+      const listContainer = document.getElementById('posts-list');
+      const countLabel = document.getElementById('posts-count');
+      
+      let sourceData = filteredArray || posts;
+
+      if (activeFilterCategory !== '전체') {
+        sourceData = sourceData.filter(p => p.category === activeFilterCategory);
+      }
+
+      if (currentSortMode === 'views') {
+        sourceData.sort((a, b) => {
+          if (b.views === a.views) return b.id - a.id;
+          return b.views - a.views;
+        });
+      } else {
+        sourceData.sort((a, b) => b.id - a.id);
+      }
+      
+      renderSortButtons();
+      
+      countLabel.textContent = `총 ${sourceData.length}개 소식`;
+      listContainer.innerHTML = '';
+
+      if (sourceData.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 p-8 shadow-inner">
+            <i data-lucide="folder-open" class="w-14 h-14 text-slate-300 mx-auto mb-4"></i>
+            <p class="text-xs font-extrabold text-slate-400">선택한 카테고리에 등록된 이야기가 없습니다.</p>
+            <p class="text-[11px] text-slate-300 mt-1">상단의 "새 글 작성"을 눌러 첫 소식을 전해보세요!</p>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      sourceData.forEach(post => {
+        const item = document.createElement('div');
+        item.className = "bg-white hover:border-indigo-400 hover:shadow-lg px-6 py-5 rounded-2xl border border-slate-200/80 cursor-pointer transition-all duration-200 flex flex-col space-y-2.5";
+        item.onclick = () => viewDetail(post.id);
+
+        let iconBadge = "🍔";
+        let colorClass = "bg-orange-50 text-orange-700 border-orange-100";
+        if (post.category === '숙박') { iconBadge = "🏨"; colorClass = "bg-sky-50 text-sky-700 border-sky-100"; }
+        if (post.category === '관광지') { iconBadge = "⛰️"; colorClass = "bg-emerald-50 text-emerald-700 border-emerald-100"; }
+        if (post.category === '쇼핑') { iconBadge = "🛍️"; colorClass = "bg-purple-50 text-purple-700 border-purple-100"; }
+        if (post.category === '레포츠') { iconBadge = "🏄"; colorClass = "bg-amber-50 text-amber-700 border-amber-100"; }
+
+        item.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="flex items-center space-x-3 overflow-hidden">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-extrabold border shrink-0 ${colorClass}">${iconBadge} ${post.category}</span>
+              <h3 class="font-extrabold text-sm text-slate-800 truncate">${escapeHtml(post.title)}</h3>
+            </div>
+            <span class="text-[10px] text-slate-400 shrink-0 font-bold">${post.date.split(' ')[0]}</span>
+          </div>
+          <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">${escapeHtml(post.content)}</p>
+          <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="user" class="w-4 h-4 text-slate-300"></i>
+              <span class="font-bold text-slate-600">${escapeHtml(post.author)}</span>
+            </div>
+            <div class="flex items-center space-x-1 text-slate-400">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-300"></i>
+              <span class="font-medium text-[10px]">${post.views || 0}</span>
+            </div>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderSortButtons() {
+      let sortContainer = document.getElementById('sort-buttons-container');
+      
+      if (!sortContainer) {
+        const countLabel = document.getElementById('posts-count');
+        if (countLabel) {
+          sortContainer = document.createElement('div');
+          sortContainer.id = 'sort-buttons-container';
+          sortContainer.className = 'flex items-center space-x-2 text-[11px] font-bold text-slate-400 ml-auto';
+          countLabel.parentNode.appendChild(sortContainer);
+        }
+      }
+
+      if (sortContainer) {
+        const isLatest = currentSortMode === 'latest';
+        sortContainer.innerHTML = `
+          <button onclick="changeSortMode('latest')" class="${isLatest ? 'text-indigo-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'} transition-all">최신순</button>
+          <span class="text-slate-200">|</span>
+          <button onclick="changeSortMode('views')" class="${!isLatest ? 'text-indigo-600 font-extrabold' : 'text-slate-400 hover:text-slate-600'} transition-all">인기순</button>
+        `;
+      }
+    }
+
+    // ----------------------------------------------------
+    // 4. 게시글 생성 및 상세 렌더 (C & R)
+    // ----------------------------------------------------
+    function clearWriteFields() {
+      document.getElementById('post-author').value = '';
+      document.getElementById('post-password').value = '';
+      document.getElementById('post-title').value = '';
+      document.getElementById('post-content').value = '';
+      document.getElementById('post-category').selectedIndex = 0;
+    }
+
+    function saveNewPost() {
+      const category = document.getElementById('post-category').value;
+      const author = document.getElementById('post-author').value.trim() || "익명";
+      const password = document.getElementById('post-password').value.trim();
+      const title = document.getElementById('post-title').value.trim();
+      const content = document.getElementById('post-content').value.trim();
+
+      if (!password || password.length < 4) {
+        triggerStatusNotification("비밀번호는 안전을 위해 최소 4글자 이상 지정해야 합니다.", true);
+        return;
+      }
+      if (!title || !content) {
+        triggerStatusNotification("글 제목과 이야기를 채워 넣어주세요.", true);
+        return;
+      }
+
+      const now = new Date();
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+      const newPost = {
+        id: Date.now(),
+        category,
+        title,
+        content,
+        author,
+        password,
+        date: formattedDate,
+        views: 0 
+      };
+
+      posts.unshift(newPost);
+      savePostsToStorage();
+      switchView('list');
+      triggerStatusNotification("새로운 익명 소통 게시글이 발행되었습니다.");
+    }
+
+    function viewDetail(id) {
+      const post = posts.find(p => p.id === id);
+      if (!post) return;
+
+      post.views = (post.views || 0) + 1;
+      savePostsToStorage();
+
+      currentDetailPost = post;
+      
+      const badge = document.getElementById('detail-category-badge');
+      badge.textContent = post.category;
+      
+      let colorClass = "bg-orange-50 text-orange-700 border border-orange-200";
+      if (post.category === '숙박') colorClass = "bg-sky-50 text-sky-700 border border-sky-200";
+      if (post.category === '관광지') colorClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+      if (post.category === '쇼핑') colorClass = "bg-purple-50 text-purple-700 border border-purple-200";
+      if (post.category === '레포츠') colorClass = "bg-amber-50 text-amber-700 border border-amber-200";
+      badge.className = `text-xs px-3 py-1.5 rounded-full font-extrabold ${colorClass}`;
+
+      document.getElementById('detail-title').textContent = post.title;
+      document.getElementById('detail-author').textContent = post.author;
+      document.getElementById('detail-date').textContent = post.date;
+      document.getElementById('detail-content').textContent = post.content;
+
+      let detailViewsLabel = document.getElementById('detail-views');
+      if (!detailViewsLabel) {
+        const authorLabel = document.getElementById('detail-author');
+        if (authorLabel && authorLabel.parentNode) {
+          detailViewsLabel = document.createElement('span');
+          detailViewsLabel.id = 'detail-views';
+          detailViewsLabel.className = 'text-xs text-slate-400 flex items-center space-x-1 font-medium ml-3';
+          authorLabel.parentNode.appendChild(detailViewsLabel);
+        }
+      }
+      if (detailViewsLabel) {
+        detailViewsLabel.innerHTML = `<i data-lucide="eye" class="w-3.5 h-3.5 text-slate-300"></i> <span class="pl-0.5">조회수 ${post.views}</span>`;
+      }
+
+      closeAuthDrawer();
+      switchView('detail');
+
+      // 🌟 [추가/변경] 상세 페이지 진입 시 동적 데이터를 카카오 공유 버튼에 즉시 연동
+      initKakao();
+      if (window.Kakao && document.getElementById('kakaotalk-sharing-btn')) {
+        try {
+          const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${post.id}`;
+          
+          window.Kakao.Share.createDefaultButton({
+            container: '#kakaotalk-sharing-btn',
+            objectType: 'feed',
+            content: {
+              title: `[${post.category}] ${post.title}`,
+              description: post.content.substring(0, 50) + '...',
+              imageUrl: 'https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?q=80&w=450', 
+              link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+              },
+            },
+            social: {
+              sharedCount: post.views || 0,
+            },
+            buttons: [
+              {
+                title: 'LocalHub에서 보기',
+                link: {
+                  mobileWebUrl: shareUrl,
+                  webUrl: shareUrl,
+                },
+              },
+            ],
+          });
+        } catch (err) {
+          console.error("카카오톡 공유 버튼 초기화 에러:", err);
+        }
+      }
+    }
+
+    // ----------------------------------------------------
+    // 5. 비밀번호 검증 (U & D 권한 확인)
+    // ----------------------------------------------------
+    function initiateAuth(action) {
+      currentAuthAction = action;
+      
+      const drawer = document.getElementById('auth-drawer');
+      const label = document.getElementById('auth-title-label');
+      const input = document.getElementById('auth-password-input');
+      const errMsg = document.getElementById('auth-error-msg');
+      const editContainer = document.getElementById('edit-form-container');
+
+      drawer.classList.remove('hidden');
+      editContainer.classList.add('hidden');
+      errMsg.classList.add('hidden');
+      input.value = '';
+      input.focus();
+
+      if (action === 'edit') {
+        label.innerHTML = `<i data-lucide="edit" class="w-4 h-4 mr-1.5 text-amber-600"></i> 수정 비밀번호 확인`;
+      } else {
+        label.innerHTML = `<i data-lucide="trash-2" class="w-4 h-4 mr-1.5 text-red-600"></i> 삭제 비밀번호 확인`;
+      }
+      lucide.createIcons();
+    }
+
+    function closeAuthDrawer() {
+      currentAuthAction = null;
+      document.getElementById('auth-drawer').classList.add('hidden');
+      document.getElementById('edit-form-container').classList.add('hidden');
+      document.getElementById('auth-error-msg').classList.add('hidden');
+    }
+
+    function verifyPassword() {
+      const inputVal = document.getElementById('auth-password-input').value;
+      const errMsg = document.getElementById('auth-error-msg');
+
+      if (inputVal !== currentDetailPost.password) {
+        errMsg.classList.remove('hidden');
+        return;
+      }
+
+      errMsg.classList.add('hidden');
+      document.getElementById('auth-drawer').classList.add('hidden');
+
+      if (currentAuthAction === 'delete') {
+        posts = posts.filter(p => p.id !== currentDetailPost.id);
+        savePostsToStorage();
+        switchView('list');
+        triggerStatusNotification("게시물이 안전하게 삭제 처리되었습니다.");
+      } else if (currentAuthAction === 'edit') {
+        const editContainer = document.getElementById('edit-form-container');
+        editContainer.classList.remove('hidden');
+        
+        document.getElementById('edit-title').value = currentDetailPost.title;
+        document.getElementById('edit-content').value = currentDetailPost.content;
+      }
+    }
+
+    // ----------------------------------------------------
+    // 6. 게시글 업데이트 (Update)
+    // ----------------------------------------------------
+    function submitUpdatePost() {
+      const updatedTitle = document.getElementById('edit-title').value.trim();
+      const updatedContent = document.getElementById('edit-content').value.trim();
+
+      if (!updatedTitle || !updatedContent) {
+        triggerStatusNotification("수정할 양식을 모두 작성하셔야 합니다.", true);
+        return;
+      }
+
+      currentDetailPost.title = updatedTitle;
+      currentDetailPost.content = updatedContent;
+      
+      savePostsToStorage();
+
+      document.getElementById('detail-title').textContent = updatedTitle;
+      document.getElementById('detail-content').textContent = updatedContent;
+
+      document.getElementById('edit-form-container').classList.add('hidden');
+      triggerStatusNotification("수정 반영이 완료되었습니다.");
+    }
+
+    // ----------------------------------------------------
+    // 7. 검색 보조 로직
+    // ----------------------------------------------------
+    function handleSearch() {
+      const val = document.getElementById('search-input').value.toLowerCase();
+      const filtered = posts.filter(p => 
+        p.title.toLowerCase().includes(val) || 
+        p.content.toLowerCase().includes(val) ||
+        p.author.toLowerCase().includes(val)
+      );
+      renderPosts(filtered);
+    }
+
+    // ----------------------------------------------------
+    // 8. 경북 로컬 정보 질의응답 챗봇 시스템
+    // ----------------------------------------------------
+    let isChatbotOpen = false;
+
+    function toggleChatbot() {
+      isChatbotOpen = !isChatbotOpen;
+      const win = document.getElementById('chatbot-window');
+      const icon = document.getElementById('chatbot-icon');
+
+      if (isChatbotOpen) {
+        win.classList.remove('hidden');
+        icon.setAttribute('data-lucide', 'chevrons-down');
+      } else {
+        win.classList.add('hidden');
+        icon.setAttribute('data-lucide', 'bot');
+      }
+      lucide.createIcons();
+    }
+
+    function handleChatEnter(e) {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      appendMessage(query, 'user');
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = generateBotReply(query);
+        appendMessage(reply, 'bot');
+      }, 700);
+    }
+
+    function sendQuickKeyword(keyword) {
+      appendMessage(keyword, 'user');
+      setTimeout(() => {
+        const reply = generateBotReply(keyword);
+        appendMessage(reply, 'bot');
+      }, 500);
+    }
+
+    function appendMessage(text, sender) {
+      const chatBox = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      
+      if (sender === 'user') {
+        msgDiv.className = "flex justify-end";
+        msgDiv.innerHTML = `
+          <div class="bg-indigo-600 text-white p-2.5 rounded-l-xl rounded-br-xl max-w-[80%] leading-relaxed shadow-sm">
+            ${escapeHtml(text)}
+          </div>
+        `;
+      } else {
+        msgDiv.className = "flex items-start space-x-2";
+        msgDiv.innerHTML = `
+          <div class="bg-indigo-100 p-1 rounded-full shrink-0">
+            <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-600"></i>
+          </div>
+          <div class="bg-white p-2.5 rounded-r-xl rounded-bl-xl border border-slate-100 shadow-sm max-w-[80%] leading-relaxed">
+            ${text}
+          </div>
+        `;
+      }
+
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function generateBotReply(query) {
+      const q = query.toLowerCase();
+
+      if (q.includes('맛집') || q.includes('음식점') || q.includes('먹거리')) {
+        return `🍔 <strong>경북 로컬 추천 맛집 리스트</strong>입니다:<br>
+        1. <strong>구미 '싱글벙글 복어'</strong>: 얼큰한 국물과 미나리 미니 복어탕의 진수!<br>
+        2. <strong>경주 '교리김밥'</strong>: 부드러운 달걀지단이 꽉 찬 명물 김밥.<br>
+        3. <strong>안동 '안동찜닭골목'</strong>: 안동 구시장에 위치한 오리지널 간장 베이스 찜닭!`;
+      }
+      if (q.includes('관광지') || q.includes('구경') || q.includes('가볼만')) {
+        return `⛰️ <strong>경북 대표 가볼만한 명소</strong>입니다:<br>
+        1. <strong>구미 금오산 도립공원</strong>: 대혜폭포와 도선굴 코스가 환상적입니다.<br>
+        2. <strong>경주 불국사 & 석굴암</strong>: 경북 역사의 얼을 보여주는 대표 사찰.<br>
+        3. <strong>안동 하회마을 & 부용대</strong>: 고택 체험과 낙동강 수변 드라이브 코스 추천!`;
+      }
+      if (q.includes('레포츠') || q.includes('활동') || q.includes('레저')) {
+        return `🏄 <strong>경북 스릴 가득 레포츠 추천</strong>:<br>
+        1. <strong>청도 군파크 루지</strong>: 짜릿한 긴 트랙을 고속 다운힐로 내달려보세요.<br>
+        2. <strong>문경 패러글라이딩</strong>: 문경 활공장에서 하늘을 나는 잊지 못할 경험!<br>
+        3. <strong>포항 영일대 서핑</strong>: 시원한 파도를 타고 달리는 동해 해양 스포츠의 성지.`;
+      }
+      if (q.includes('쇼핑') || q.includes('전통시장') || q.includes('시장')) {
+        return `🛍️ <strong>경북 특색 쇼핑 & 시장 정보</strong>:<br>
+        1. <strong>포항 죽도시장</strong>: 싱싱한 해산물과 과메기, 대게 쇼핑 천국!<br>
+        2. <strong>구미 새마을중앙시장</strong>: 찹쌀 도너츠와 가성비 좋은 순대골목 명물.<br>
+        3. <strong>경주 황리단길 소품샵</strong>: 아기자기한 전통 장식물과 디저트 굿즈 쇼핑.`;
+      }
+      if (q.includes('숙소') || q.includes('숙박') || q.includes('호텔')) {
+        return `🏨 <strong>경북 낭만 숙박 추천</strong>:<br>
+        1. <strong>경주 라한셀렉트</strong>: 보문호수 전망을 가진 고급스러운 숙박 코스.<br>
+        2. <strong>영덕 하벳 리조트</strong>: 동해바다 해안가 바로 앞에 자리 잡은 이국적인 수영장 리조트.<br>
+        3. <strong>안동 구름에 리조트</strong>: 전통 한옥 고택을 프라이빗한 감성으로 개조한 프리미엄 한옥스테이.`;
+      }
+
+      return `경북 LocalHub와 관련한 정보를 분석하고 있습니다. 🔍<br><br><strong>"추천 맛집", "주요 관광지", "전통시장", "레포츠 활동"</strong> 등을 위 추천 키워드 칩스나 채팅으로 물어봐 주시면 경북 명소들을 정확하게 설명해 드릴 수 있습니다.`;
+    }
+
+    // ----------------------------------------------------
+    // 9. 공용 보조 함수들
+    // ----------------------------------------------------
+    function triggerStatusNotification(msg, isError = false) {
+      const alertBar = document.getElementById('top-alert');
+      const alertMsg = document.getElementById('top-alert-msg');
+
+      alertMsg.innerHTML = `<i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}" class="w-4 h-4 mr-2 ${isError ? 'text-red-500' : 'text-emerald-600'}"></i> ${msg}`;
+      
+      if (isError) {
+        alertBar.className = "bg-red-50 border-b border-red-150 text-red-800 px-6 py-3 text-xs flex justify-between items-center shrink-0";
+      } else {
+        alertBar.className = "bg-emerald-50 border-b border-emerald-100 text-emerald-800 px-6 py-3 text-xs flex justify-between items-center shrink-0";
+      }
+
+      alertBar.classList.remove('hidden');
+      lucide.createIcons();
+      
+      setTimeout(() => {
+        closeTopAlert();
+      }, 3500);
+    }
+
+    function closeTopAlert() {
+      document.getElementById('top-alert').classList.add('hidden');
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // 최초 로드 셋업
+    window.onload = function() {
+      loadPosts();
+      switchView('list');
+      
+      // Deep Link 지원: 만약 URL 파라미터에 postId가 있으면 상세페이지 바로 오픈
+      const urlParams = new URLSearchParams(window.location.search);
+      const pid = urlParams.get('postId');
+      if (pid) {
+        viewDetail(Number(pid));
+      }
+    };
+  </script>
+</body>
+</html>
