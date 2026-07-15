@@ -36,15 +36,6 @@ from pydantic import BaseModel
 
 from fastapi.middleware.cors import CORSMiddleware
 
-# 개발용: 필요한 origin만 허용하세요. '*'는 개발 전용입니다.
-origins = [
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
 TourBase.metadata.create_all(bind=tour_engine)
 PostBase.metadata.create_all(bind=post_engine)
 
@@ -62,8 +53,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # 또는 ["*"] (개발 전용)
-    allow_credentials=True,
+    allow_origins=["*"],  # 모든 도메인 허용
+    allow_credentials=False, # 중복 허용 불가하므로 False 설정
     allow_methods=["*"],
     allow_headers=["*"],
 )
