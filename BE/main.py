@@ -78,6 +78,16 @@ CATEGORY_TO_CONTENT_TYPE_ID = {
     "레포츠": 28,
 }
 
+# 🌟 사진이 없을 때 사용할 기본 아이콘/이미지 매핑 추가
+DEFAULT_ICON = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=300&auto=format&fit=crop" # 공통 기본 (나침반/여행지도 이미지 등)
+CATEGORY_ICONS = {
+    "관광지": "https://cdn-icons-png.flaticon.com/512/854/854829.png",    # 관광지 아이콘
+    "숙박": "https://cdn-icons-png.flaticon.com/512/2983/2983803.png",     # 숙박/호텔 아이콘
+    "음식점": "https://cdn-icons-png.flaticon.com/512/1046/1046747.png",   # 음식점/식사 아이콘
+    "쇼핑": "https://cdn-icons-png.flaticon.com/512/1170/1170678.png",     # 쇼핑/카트 아이콘
+    "레포츠": "https://cdn-icons-png.flaticon.com/512/3144/3144933.png",   # 스포츠/액티비티 아이콘
+}
+
 
 def normalize_category(value: str | None) -> str | None:
     if not value:
@@ -192,6 +202,15 @@ def get_all_places(db: Session = Depends(get_tour_db)):
     result_items = []
     for it in items:
         cat = normalize_cat_for_output(it.content_type)
+        
+        # 🌟 사진 예외 처리 로직 적용
+        original_image = it.firstimage or it.firstimage2 or ""
+        # 원본 이미지가 없거나 공백 문자열인 경우 대체 아이콘 설정
+        if not original_image.strip():
+            image_url = CATEGORY_ICONS.get(cat, DEFAULT_ICON)
+        else:
+            image_url = original_image
+
         result_items.append(
             {
                 "id": it.contentid or f"db-{it.id}",
@@ -202,7 +221,7 @@ def get_all_places(db: Session = Depends(get_tour_db)):
                 "lng": float(it.mapx) if it.mapx is not None else None,
                 "category": cat,
                 "desc": it.addr1 or it.addr2 or "",
-                "imageUrl": it.firstimage or it.firstimage2 or "",
+                "imageUrl": image_url,  # 👈 수정된 이미지 URL 주입
             }
         )
 
@@ -285,6 +304,15 @@ def search_places(
     result_items = []
     for it in items:
         cat = normalize_cat_for_output(it.content_type)
+        
+        # 🌟 사진 예외 처리 로직 적용
+        original_image = it.firstimage or it.firstimage2 or ""
+        # 원본 이미지가 없거나 공백 문자열인 경우 대체 아이콘 설정
+        if not original_image.strip():
+            image_url = CATEGORY_ICONS.get(cat, DEFAULT_ICON)
+        else:
+            image_url = original_image
+
         result_items.append(
             {
                 "id": it.contentid or f"db-{it.id}",
@@ -295,7 +323,7 @@ def search_places(
                 "lng": float(it.mapx) if it.mapx is not None else None,
                 "category": cat,
                 "desc": it.addr1 or it.addr2 or "",
-                "imageUrl": it.firstimage or it.firstimage2 or "",
+                "imageUrl": image_url,  # 👈 수정된 이미지 URL 주입
             }
         )
 
