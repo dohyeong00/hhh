@@ -28,15 +28,30 @@ def create_post(db: Session, payload):
     db.refresh(p)
     return p
 
-def get_posts(db: Session, limit: int = 20, offset: int = 0, category: str | None = None, q: str | None = None):
+def get_posts(
+    db: Session, 
+    limit: int = 20, 
+    offset: int = 0, 
+    category: str | None = None, 
+    q: str | None = None,
+    sort_by: str = "created_at"  # 👈 정렬 기준 매개변수 추가 (기본값: 작성일순)
+):
     stmt = select(Post)
     if category:
         stmt = stmt.where(Post.category == category)
     if q:
         like_q = f"%{q}%"
         stmt = stmt.where(Post.title.ilike(like_q) | Post.content.ilike(like_q) | Post.author.ilike(like_q))
+    
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
-    stmt = stmt.order_by(Post.created_at.desc()).limit(limit).offset(offset)
+    
+    # 👈 정렬 로직 분기 처리
+    if sort_by == "views":
+        stmt = stmt.order_by(Post.views.desc(), Post.created_at.desc())  # 조회수 높은 순 (조회수가 같으면 최신순)
+    else:
+        stmt = stmt.order_by(Post.created_at.desc())  # 기존 최신순
+        
+    stmt = stmt.limit(limit).offset(offset)
     items = db.scalars(stmt).all()
     return items, total or 0
 

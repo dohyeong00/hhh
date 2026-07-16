@@ -328,9 +328,11 @@ def api_list_posts(
     offset: int = 0,
     category: str | None = None,
     q: str | None = None,
+    sort: str = Query(default="created_at", description="정렬 기준 (created_at: 최신순, views: 인기순)"), # 👈 쿼리 파라미터 추가
     db: Session = Depends(get_post_db),
 ):
-    items, total = get_posts(db, limit=limit, offset=offset, category=category, q=q)
+    # crud의 get_posts 호출 시 sort_by 매개변수로 넘겨줌
+    items, total = get_posts(db, limit=limit, offset=offset, category=category, q=q, sort_by=sort)
     return {"items": [PostOut.from_orm(i) for i in items], "total": total, "limit": limit, "offset": offset}
 
 
