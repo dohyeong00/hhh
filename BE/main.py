@@ -81,11 +81,11 @@ CATEGORY_TO_CONTENT_TYPE_ID = {
 # 🌟 사진이 없을 때 사용할 기본 아이콘/이미지 매핑 추가
 DEFAULT_ICON = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=300&auto=format&fit=crop" # 공통 기본 (나침반/여행지도 이미지 등)
 CATEGORY_ICONS = {
-    "관광지": "https://cdn-icons-png.flaticon.com/512/854/854829.png",    # 관광지 아이콘
-    "숙박": "https://cdn-icons-png.flaticon.com/512/2983/2983803.png",     # 숙박/호텔 아이콘
+    "관광지": "https://cdn-icons-png.flaticon.com/512/447/447031.png",    # 관광지 아이콘
+    "숙박": "https://cdn-icons-png.flaticon.com/512/489/489401.png",     # 숙박/호텔 아이콘
     "음식점": "https://cdn-icons-png.flaticon.com/512/1046/1046747.png",   # 음식점/식사 아이콘
     "쇼핑": "https://cdn-icons-png.flaticon.com/512/1170/1170678.png",     # 쇼핑/카트 아이콘
-    "레포츠": "https://cdn-icons-png.flaticon.com/512/3144/3144933.png",   # 스포츠/액티비티 아이콘
+    "레포츠": "https://cdn-icons-png.flaticon.com/512/3112/3112946.png",   # 스포츠/액티비티 아이콘
 }
 
 
