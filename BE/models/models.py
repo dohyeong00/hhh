@@ -47,6 +47,8 @@ class Post(PostBase):
     password = Column(String, nullable=False)  # 평문 저장 (교육용)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    views = Column(Integer, default=0, nullable=False)
+
 # models/models.py 에 아래 내용 추가
 from sqlalchemy import LargeBinary
 from .database import RagBase

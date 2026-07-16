@@ -40,7 +40,12 @@ def get_posts(db: Session, limit: int = 20, offset: int = 0, category: str | Non
     return items, total or 0
 
 def get_post(db: Session, post_id: int):
-    return db.get(Post, post_id)
+    post = db.get(Post, post_id)
+    if post:
+        post.views += 1
+        db.commit()
+        db.refresh(post)
+    return post
 
 def verify_password(post: Post, plain: str) -> bool:
     return plain == post.password
