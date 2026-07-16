@@ -55,3 +55,20 @@ class KnowledgeCreate(BaseModel):
 
 class RAGQuery(BaseModel):
     question: str
+
+# models/schemas.py 에 추가
+from datetime import datetime
+
+class RouteCreate(BaseModel):
+    user_name: str
+    title: str
+    places: List[str] # 여행지 contentid 또는 이름의 리스트 (예: ["123", "456"])
+
+class RouteOut(BaseModel):
+    id: int
+    user_name: str
+    title: str
+    places: List[str]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

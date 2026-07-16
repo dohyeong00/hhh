@@ -65,3 +65,25 @@ def get_rag_db():
         yield db_rag
     finally:
         db_rag.close()
+
+# 기존 ROOT 정의 아래에 추가
+ROUTE_DB_PATH = ROOT / "routes.db"
+if not ROUTE_DB_PATH.exists():
+    ROUTE_DB_PATH = ROOT / "DB" / "routes.db"
+
+ROUTE_SQLALCHEMY_DATABASE_URL = f"sqlite:///{ROUTE_DB_PATH}"
+
+route_engine = create_engine(
+    ROUTE_SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+)
+
+RouteSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=route_engine)
+RouteBase = declarative_base()
+
+def get_route_db():
+    db = RouteSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

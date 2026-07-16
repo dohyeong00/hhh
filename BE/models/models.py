@@ -59,3 +59,14 @@ class Knowledge(RagBase):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String, nullable=False)
     embedding = Column(LargeBinary, nullable=False) # 벡터 데이터를 바이너리로 저장
+
+from .database import RouteBase
+
+class Route(RouteBase):
+    __tablename__ = "routes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_name = Column(String, nullable=False, index=True) # 사용자 ID 혹은 이름
+    title = Column(String, nullable=False)                 # 코스 제목
+    places_json = Column(Text, nullable=False)             # 코스 리스트 (JSON 스트링)
+    created_at = Column(DateTime, default=datetime.utcnow)

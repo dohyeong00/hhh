@@ -1,12 +1,14 @@
 # main.py 상단 import 추가
 import os
+import re
+import json
 import numpy as np
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
-from .models.database import RagBase, rag_engine, get_rag_db
-from .models.schemas import KnowledgeCreate, RAGQuery
-from .models.crud import create_knowledge, get_all_knowledge
+from .models.database import RagBase, rag_engine, get_rag_db, RouteBase, route_engine, get_route_db
+from .models.schemas import KnowledgeCreate, RAGQuery, RouteCreate, RouteOut
+from .models.crud import create_knowledge, get_all_knowledge, create_route, get_routes_by_user, get_route_by_id, update_route, delete_route
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from sqlalchemy import select, func, or_
@@ -38,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 TourBase.metadata.create_all(bind=tour_engine)
 PostBase.metadata.create_all(bind=post_engine)
+RouteBase.metadata.create_all(bind=route_engine)
 
 # RAG 테이블 생성 등록
 RagBase.metadata.create_all(bind=rag_engine)
@@ -373,23 +376,35 @@ def api_delete_post(
     return {"detail": "deleted"}
 
 
-@app.post("/rag/query")
+@app.post("/rag/query", tags=["GPT"], summary="Query RAG knowledge base")
 def query_rag(payload: RAGQuery, db: Session = Depends(get_tour_db)):
     # payload.query 예: "구미 금오산 근처 맛집 추천해줘"
     query_text = payload.question.strip()
     
-    # [핵심] 임베딩 벡터 검색 대신, 간단한 키워드 필터링을 수행합니다.
-    # 사용자가 입력한 단어 중 주요 키워드를 뽑아서 DB에서 관련 항목들을 가져옵니다.
-    words = [w for w in query_text.split() if len(w) > 1] # 2글자 이상 단어 추출
-    
-    if words:
-        # 단어들 중 하나라도 포함하는 관광 아이템 조회
-        conditions = [TourItem.title.ilike(f"%{word}%") | TourItem.addr1.ilike(f"%{word}%") for word in words]
-        stmt = select(TourItem).where(or_(*conditions)).limit(5)
+    if query_text:
+        # 공백 기준으로 단어 분리 (간단 처리)
+        words = [w.strip() for w in re.split(r"\s+", query_text) if len(w.strip()) > 0]
+        if words:
+            patterns = [f"%{w}%" for w in words]
+            # 각 단어에 대해 (title OR addr1 OR addr2) 조건 생성
+            per_word_clauses = [
+                or_(
+                    TourItem.title.ilike(p),
+                    TourItem.addr1.ilike(p),
+                    TourItem.addr2.ilike(p),
+                    TourItem.content_type.ilike(p),
+                )
+                for p in patterns
+            ]
+            # 모든 단어 조건을 AND로 결합 (where(*clauses)는 AND 효과)
+            stmt = select(TourItem).where(*per_word_clauses).order_by(TourItem.title).limit(5).offset(0)
+        else:
+            stmt = select(TourItem).order_by(TourItem.title).limit(5).offset(0)
     else:
-        stmt = select(TourItem).limit(5)
+        stmt = select(TourItem).order_by(TourItem.title).limit(5).offset(0)
         
     items = db.scalars(stmt).all()
+    print(f"RAG Query: '{query_text}' -> Retrieved {len(items)} items from DB")
     
     # 4. 조회된 데이터를 텍스트 컨텍스트로 구성
     context_parts = []
@@ -425,3 +440,35 @@ def query_rag(payload: RAGQuery, db: Session = Depends(get_tour_db)):
     )
     
     return {"answer": response.choices[0].message.content}
+
+# 1. 여행 코스 저장 API
+# API 엔드포인트 등록 시 get_route_db 사용
+@app.post("/routes", response_model=RouteOut, tags=["routes"])
+def save_user_route(payload: RouteCreate, db: Session = Depends(get_route_db)):
+    return create_route(db, payload)
+
+# 2. 특정 사용자의 모든 여행 코스 불러오기 API
+@app.get("/routes/user/{user_name}", response_model=list[RouteOut], tags=["routes"])
+def load_user_routes(user_name: str, db: Session = Depends(get_route_db)):
+    return get_routes_by_user(db, user_name)
+
+# 3. 여행 코스 수정 API
+@app.put("/routes/{route_id}", response_model=RouteOut, tags=["routes"])
+def modify_route(route_id: int, title: str, places: list[str], db: Session = Depends(get_route_db)):
+    db_route = get_route_by_id(db, route_id)
+    if not db_route:
+        raise HTTPException(status_code=404, detail="해당 코스를 찾을 수 없습니다.")
+    return update_route(db, db_route, title, places)
+
+@app.delete("/routes/{route_id}", tags=["routes"])
+def delete_user_route(route_id: int, db: Session = Depends(get_route_db)):
+    # 1. 삭제할 코스가 존재하는지 조회
+    db_route = get_route_by_id(db, route_id)
+    if not db_route:
+        raise HTTPException(status_code=404, detail="해당 여행 코스를 찾을 수 없습니다.")
+    
+    # 2. 존재하면 DB에서 삭제 수행
+    delete_route(db, db_route)
+    
+    # 3. 삭제 성공 메시지 반환
+    return {"message": f"ID {route_id}번 여행 코스가 성공적으로 삭제되었습니다."}

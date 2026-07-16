@@ -1,6 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from .models import TourItem
+from typing import List
 
 def get_tour_items(db: Session, region: str | None, limit: int, offset: int):
     stmt = select(TourItem).order_by(TourItem.title).limit(limit).offset(offset)
@@ -78,3 +79,54 @@ def create_knowledge(db: Session, content: str, embedding_vector: list):
 def get_all_knowledge(db: Session):
     stmt = select(Knowledge)
     return db.scalars(stmt).all()
+
+# models/crud.py 에 추가
+import json
+from .models import Route
+from .schemas import RouteCreate
+
+def create_route(db: Session, payload: RouteCreate):
+    # 1. DB 모델 인스턴스 생성
+    db_route = Route(
+        user_name=payload.user_name,
+        title=payload.title,
+        # payload.places가 리스트 형태이므로, JSON 문자열로 변환하여 저장
+        places_json=json.dumps(payload.places, ensure_ascii=False) 
+    )
+    db.add(db_route)
+    db.commit()
+    db.refresh(db_route)
+    
+    # 🌟 [해결 핵심] DB 인스턴스에 임시로 'places' 속성을 달아줍니다.
+    # FastAPI가 RouteOut 스키마로 변환할 때 이 'places' 필드를 읽어갑니다.
+    db_route.places = payload.places 
+    
+    return db_route
+
+def get_routes_by_user(db: Session, user_name: str):
+    stmt = select(Route).where(Route.user_name == user_name).order_by(Route.created_at.desc())
+    routes = db.scalars(stmt).all()
+    
+    for r in routes:
+        # DB에서 가져온 JSON 문자열을 다시 파이썬 리스트로 풀어 r.places에 주입
+        r.places = json.loads(r.places_json) if r.places_json else []
+    return routes
+
+def get_route_by_id(db: Session, route_id: int):
+    route = db.get(Route, route_id)
+    if route:
+        route.places = json.loads(route.places_json)
+    return route
+
+def update_route(db: Session, route: Route, title: str, places: List[str]):
+    route.title = title
+    route.places_json = json.dumps(places, ensure_ascii=False)
+    db.add(route)
+    db.commit()
+    db.refresh(route)
+    route.places = places
+    return route
+
+def delete_route(db: Session, route: Route):
+    db.delete(route)
+    db.commit()
